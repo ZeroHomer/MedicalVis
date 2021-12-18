@@ -43,5 +43,5 @@ MenuBar中有两个重要对象`window`和`dataManager`:<br>
 - `dataManager` 有相关数据处理和读入函数，具体可看代码。
 
 ## 相关文档
-<https://docs.pyvista.org/examples/02-plot/volume.html>
+<https://docs.pyvista.org/examples/02-plot/volume.html><br>
 <https://blog.csdn.net/jiaoyangwm/article/details/79746157>
