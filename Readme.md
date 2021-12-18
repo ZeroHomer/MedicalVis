@@ -39,7 +39,7 @@
    (若不理解可以运行程序与代码对应)
 2. 在MenuBar类的 `actionTriggerDict`添加相关功能对应函数名，如添加 `Inverse FFT`菜单功能名,对应写入 `self.inverse_fft`
 3. 在MenuBar类和DataManager类中添加对应的函数,DataManager负责数据处理，MenuBar类通过内部属性self.dataManager调用相关函数。
-4. 数据通过DataManager处理完成之后打包成`DataManager`对象返回给MenuBar，调用`self.displayInOtherWindow(dataManager)`将处理后的数据在新窗口中显示。
+4. 数据（一般为numpy.ndarray格式）通过DataManager处理完成之后打包成`DataManager`对象返回给MenuBar，调用`self.displayInOtherWindow(dataManager)`将处理后的数据在新窗口中显示。
 
 ***
 MenuBar中有两个重要对象`window`和`dataManager`:<br>
