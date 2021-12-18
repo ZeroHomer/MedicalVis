@@ -4,7 +4,9 @@
 ***
 **建议使用pycharm开发**<br>
 **data文件夹下有测试数据**<br>
-所需包： pyqt5, pyvista, pyvistaqt, opencv, simpleITK
+所需包： pyqt5, pyvista, pyvistaqt, opencv, simpleITK<br>
+通过`pip install -r requirements.txt`安装包
+
 ***
 ## 项目结构
 
