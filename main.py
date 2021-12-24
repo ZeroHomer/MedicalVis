@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 import sys
-# from MyWidget import MyWindow
+#test
 from YKWMyWidget import MyWindow
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
