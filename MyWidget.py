@@ -221,15 +221,16 @@ class MyWindow(MainWindow):
     #         self.display3d(data, cmap)
 
     def display(self, cmap='gray', opacity='linear'):
-        data = self.dataManager.numpy_data
-        if (data.shape[-1] == 1 or data.shape[-1] == 3):
+        data = self.dataManager.ugrid_data
+        if (data == None):
+            self.display3d(cmap, opacity)
+        else:
             # 2维灰度图像或RGB图像
             self.display2d(cmap)
-        else:
-            self.display3d(cmap, opacity)
+
 
     def display3d(self, cmap=None, opacity=None):
-        data = self.dataManager.numpy_data
+        data = self.dataManager.ugrid_data
         if (self.isVolumeData):
             # 正在显示的是体数据，组件不改变
             self.plotter.update()
