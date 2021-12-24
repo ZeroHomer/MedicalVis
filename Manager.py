@@ -58,7 +58,7 @@ class DataManager:
 
 
     def is3D(self,data):
-        if len(data.shape[-1]==1 or data.shape[-1]==3):
+        if data.shape[-1] ==1 or data.shape[-1]==3:
             return False
         return True
 
