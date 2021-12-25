@@ -10,7 +10,7 @@ class DataManager:
         self.numpy_data = numpy_data
         self.read_func_dict = {'DCM': self.read_dcm, 'dcm': self.read_dcm, 'nii': self.read_nii, 'gz': self.read_nii,
                                'slc': self.read_slc, 'jpg': self.read_normal_type, 'png': self.read_normal_type}
-        if numpy_data and(numpy_data.shape[-1] == 1 or numpy_data.shape[-1] == 3):
+        if numpy_data and not (numpy_data.shape[-1] == 1 or numpy_data.shape[-1] == 3):
             self.ugrid_data = wrap(numpy_data)  # UniformGrid类，使用该类做三维数据处理
 
     def read_data(self, file_path):
