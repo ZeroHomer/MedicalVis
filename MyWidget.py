@@ -234,6 +234,7 @@ class MyWindow(MainWindow):
         data = self.dataManager.ugrid_data
         if (self.isVolumeData):
             # 正在显示的是体数据，组件不改变
+            self.plotter.clear()
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
         else:
@@ -243,7 +244,7 @@ class MyWindow(MainWindow):
             self.displayWidget = self.display3DWidget
             self.vlayout.addWidget(self.displayWidget)
             self.displayWidget.setVisible(True)
-
+            self.plotter.clear()
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
             self.isVolumeData = True
