@@ -223,10 +223,11 @@ class MyWindow(MainWindow):
     def display(self, cmap='gray', opacity='linear'):
         data = self.dataManager.ugrid_data
         if (data == None):
-            self.display3d(cmap, opacity)
-        else:
             # 2维灰度图像或RGB图像
             self.display2d(cmap)
+
+        else:
+            self.display3d(cmap, opacity)
 
 
     def display3d(self, cmap=None, opacity=None):
