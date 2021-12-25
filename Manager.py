@@ -74,12 +74,3 @@ class DataManager:
         return numpy_data
 
 
-if __name__ == '__main__':
-    dm = DataManager()
-    # dm.read_slc('E:\Study\Visualization\Assignment\MedicalVis\data\embryo.slc')
-    p = pyvista.Plotter()
-    data = dm.read_nii('E:\Study\Visualization\Assignment\MedicalVis\data\T1_preprocessed.nii.gz')
-    data = wrap(data)
-
-    p.add_volume(data)
-    p.show()
