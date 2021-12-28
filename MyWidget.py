@@ -1,36 +1,46 @@
+import sys
 import traceback
 import typing
 
-# from Manager import DataManager
+from PyQt5.QtCore import Qt
+import time
 from Manager import DataManager
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QLineEdit, QHBoxLayout, QGridLayout, QFileDialog
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtGui import QPalette, QColor, QFont
+from PyQt5.QtWidgets import QWidget, QLabel, QComboBox, QLineEdit, QHBoxLayout, QGridLayout, QFileDialog, QPushButton, \
+    QMessageBox
 from matplotlib.figure import Figure
 from pyvistaqt import QtInteractor, MainWindow
 import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+colormaps = plt.colormaps()
+saveFileType3DStr = "(*.vtk);;(*.pvtk);;(*.vti);;(*.pvti);;(*.vtr);;(*.pvtr);;(*.vtu);;(*.pvtu);;(*.obj);;(*.vtp);;(*.slc);;"
+saveFileType2DStr = "(*.dcm);;(*.jpeg);;(*.jpg);;(*.png);;(*.bmp)"
 
 class MenuBar(QtWidgets.QMenuBar):
     def __init__(self, window, dataManager):
         super().__init__(window)
         self.window = window
         self.dataManager = dataManager
-        self.menuNameDict = {'File': ['Open', 'Save'],
+
+        self.menuNameDict = {'File': ['Open', {'Save': ['Save File','Save screenshots']}],
                              'Edit': ['Undo'],
+                             'View': ['Iso-surface', 'Slice'],
                              'Process': [
-                                 {'Blur': ['Average', 'Median', 'Gussian']},
+                                 {'Blur': ['Average', 'Median', 'Gaussian']},
                                  'Sharpen',
                                  {'FFT': ['FFT', 'Inverse FFT']}
                              ]
                              }
 
-        self.actionTriggerDict = {'File': [self.open, self.save],
+        self.actionTriggerDict = {'File': [self.open, {'Save':[self.save_file,self.save_screenshots]}],
                                   'Edit': [self.undo],
-
+                                  'View': [self.iso_surface, self.slice],
                                   'Process': [
                                       {'Blur': [self.average_blur,
                                                 self.median_blur,
@@ -69,18 +79,41 @@ class MenuBar(QtWidgets.QMenuBar):
         if self.window == None:
             return
 
-        filePath = QFileDialog.getOpenFileName(caption="open file dialog")[0]
-        if len(filePath) == 0:
+        file_path = QFileDialog.getOpenFileName(caption="open file dialog")[0]
+        if len(file_path) == 0:
             return
         try:
-            self.dataManager.read_data(filePath)
+            self.dataManager.read_data(file_path)
             self.window.display()
         except Exception as e:
             print(e)
             traceback.print_exc()
 
-    def save(self):
-        pass
+    def save_file(self):
+        try:
+            file_path = None
+            if self.dataManager.ugrid_data!=None:
+                #保存三维数据
+                file_path = QFileDialog.getSaveFileName(caption='Save file',filter=saveFileType3DStr)[0]
+            else :
+                file_path = QFileDialog.getSaveFileName(caption='Save file', filter=saveFileType2DStr)[0]
+            self.dataManager.save_data(file_path)
+        except Exception as e:
+            traceback.print_exc()
+
+
+    def save_screenshots(self):
+        if(self.dataManager.ugrid_data==None):
+            QMessageBox.critical(self, '错误', '只有导入三维体数据才能截图', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            return
+        filePath = QFileDialog.getExistingDirectory(caption='Save file dialog')
+        name =  time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+        filePath = filePath+'/'+name+'.png'
+
+        try:
+            self.window.plotter.screenshot(filePath)
+        except :
+            traceback.print_exc()
 
     def undo(self):
         pass
@@ -115,6 +148,163 @@ class MenuBar(QtWidgets.QMenuBar):
             print(e)
             traceback.print_exc()
 
+    def iso_surface(self):
+        if (self.dataManager.ugrid_data != None):
+            self.window.isoSurfaceWidget = IsoSurfaceWidget(self.dataManager.ugrid_data)
+            self.window.isoSurfaceWidget.show()
+
+    def slice(self):
+        if (self.dataManager.ugrid_data != None):
+            self.window.sliceWidget = SliceWidget(self.dataManager.ugrid_data)
+            self.window.sliceWidget.show()
+
+
+class IsoSurfaceWidget(QtWidgets.QWidget):
+    def __init__(self, volumeData):
+        super().__init__()
+        self.volumeData = volumeData
+        rangeLabel = QLabel(self)
+        rangeLabel.setText('Range: ')
+        noteLabel = QLabel(self)
+        noteLabel.setText("to")
+        numLabel = QLabel(self)
+        numLabel.setText("Number:")
+        opacityLabel = QLabel(self)
+        opacityLabel.setText("Opacity(0~1):")
+
+        self.leftRangeLineEdit = QLineEdit()
+        self.rightRangeLineEdit = QLineEdit()
+        self.numLineEdit = QLineEdit()
+        self.opacityLineEdit = QLineEdit()
+
+        self.drawBtn = QPushButton('Draw', self)
+        self.frame = QtWidgets.QFrame()
+        self.plotter = QtInteractor(self.frame)
+        self.display3DWidget = self.plotter.interactor
+
+        gridLayout = QGridLayout()
+        gridLayout.addWidget(self.display3DWidget, 0, 0, 85, 1)
+        gridLayout.addWidget(rangeLabel, 0, 1)
+
+        gridLayout.addWidget(self.leftRangeLineEdit, 0, 2)
+        gridLayout.addWidget(noteLabel, 0, 3)
+        gridLayout.addWidget(self.rightRangeLineEdit, 0, 4)
+
+        gridLayout.addWidget(numLabel, 1, 1)
+        gridLayout.addWidget(self.numLineEdit, 1, 2)
+
+        gridLayout.addWidget(opacityLabel, 2, 1)
+        gridLayout.addWidget(self.opacityLineEdit, 2, 2)
+
+        gridLayout.addWidget(self.drawBtn, 3, 1)
+
+        gridLayout.setColumnStretch(0, 7)
+        gridLayout.setColumnStretch(2, 1)
+        gridLayout.setColumnStretch(4, 1)
+
+        self.drawBtn.clicked.connect(self.draw)
+
+        self.setLayout(gridLayout)
+
+    def draw(self):
+        try:
+            start = int(self.leftRangeLineEdit.text())
+            stop = int(self.rightRangeLineEdit.text())
+            num = int(self.numLineEdit.text())
+            opacity = float(self.opacityLineEdit.text())
+            if (start > stop):
+                QMessageBox.critical(self, '错误', '起始范围不能大于结束范围', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                return
+            if (opacity < 0 or opacity > 1):
+                QMessageBox.critical(self, '错误', '透明度范围为0-1', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                return
+            contours = self.volumeData.contour(np.linspace(start, stop, num))
+            self.plotter.clear()
+            self.plotter.add_mesh(contours, opacity=opacity)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        super().closeEvent(a0)
+        self.display3DWidget.close()
+
+
+class SliceWidget(QtWidgets.QWidget):
+    def __init__(self, volumeData):
+        super().__init__()
+        self.volumeData = volumeData
+        # 标签
+        normalVectorLabel = QLabel("Normal Vector: ")
+        originPointLabel = QLabel("Origin Point: ")
+        xLabel = QLabel("x")
+        xLabel.setAlignment(Qt.AlignCenter)
+        yLabel = QLabel("y")
+        yLabel.setAlignment(Qt.AlignCenter)
+        zLabel = QLabel("z")
+        zLabel.setAlignment(Qt.AlignCenter)
+        # 输入框
+        self.normalXLineEdit = QLineEdit()
+        self.normalYLineEdit = QLineEdit()
+        self.normalZLineEdit = QLineEdit()
+        self.originXLineEdit = QLineEdit()
+        self.originYLineEdit = QLineEdit()
+        self.originZLineEdit = QLineEdit()
+
+        # slice button
+        self.sliceBtn = QPushButton("slice")
+        # 显示组件
+        self.frame = QtWidgets.QFrame()
+
+        self.plotter = QtInteractor(self.frame)
+        self.display3DWidget = self.plotter.interactor
+        # self.display3DWidget.setBaseSize(500,900)
+        # 布局
+        gridLayout = QGridLayout()
+        gridLayout.addWidget(self.display3DWidget, 0, 0, 85, 1)
+
+        gridLayout.addWidget(xLabel, 0, 2)
+        gridLayout.addWidget(yLabel, 0, 3)
+        gridLayout.addWidget(zLabel, 0, 4)
+
+        gridLayout.addWidget(normalVectorLabel, 1, 1)
+        gridLayout.addWidget(self.normalXLineEdit, 1, 2)
+        gridLayout.addWidget(self.normalYLineEdit, 1, 3)
+        gridLayout.addWidget(self.normalZLineEdit, 1, 4)
+
+        gridLayout.addWidget(originPointLabel, 2, 1)
+        gridLayout.addWidget(self.originXLineEdit, 2, 2)
+        gridLayout.addWidget(self.originYLineEdit, 2, 3)
+        gridLayout.addWidget(self.originZLineEdit, 2, 4)
+
+        gridLayout.addWidget(self.sliceBtn, 3, 1)
+
+        gridLayout.setColumnStretch(0, 6)
+        gridLayout.setColumnStretch(2, 1)
+        gridLayout.setColumnStretch(3, 1)
+        gridLayout.setColumnStretch(4, 1)
+
+        self.sliceBtn.clicked.connect(self.slice)
+
+        self.setLayout(gridLayout)
+
+    def slice(self):
+        normal = (
+        float(self.normalXLineEdit.text()), float(self.normalYLineEdit.text()), float(self.normalZLineEdit.text()))
+        origin = (
+        float(self.originXLineEdit.text()), float(self.originYLineEdit.text()), float(self.originZLineEdit.text()))
+        # normal = np.array(normal)
+        # normal = normal/np.linalg.norm(normal) #向量正交
+        slices = self.volumeData.slice(normal=normal, origin=origin)
+
+        self.display3DWidget.clear()
+        self.display3DWidget.add_mesh(self.volumeData.outline())
+        self.display3DWidget.add_mesh(slices)
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        super().closeEvent(a0)
+        self.display3DWidget.close()
+
 
 class ConfigWidget(QtWidgets.QWidget):
 
@@ -126,11 +316,11 @@ class ConfigWidget(QtWidgets.QWidget):
         opacityLabel = QLabel(self)
         opacityLabel.setText('opacity')
 
-        colorMapItem = ['gray', 'cool', 'viridis']
+        colorMapItem = colormaps
         self.colorMapComboBox = QComboBox(self)
         for item in colorMapItem:
             self.colorMapComboBox.addItem(item)
-        opacityItem = ['linear', 'linear_r', 'geom', 'geom_r']
+        opacityItem = ['linear', 'linear_r', 'geom', 'geom_r', 'sigmoid', 'sigmoid_r']
         self.opacityComboBox = QComboBox(self)
         for item in opacityItem:
             self.opacityComboBox.addItem(item)
@@ -175,6 +365,10 @@ class MyWindow(MainWindow):
         menubar = MenuBar(self, self.dataManager)
         self.vlayout.addWidget(menubar)
 
+        # 设置Iso-surface组件为空
+        self.isoSurfaceWidget = None
+        # 设置切片组件为空
+        self.sliceWidget = None
         # 添加Config组件
         configWidget = ConfigWidget(self)
         self.vlayout.addWidget(configWidget)
@@ -221,18 +415,19 @@ class MyWindow(MainWindow):
     #
     #         self.display3d(data, cmap)
 
-    def display(self, cmap='gray', opacity='linear'):
-        data = self.dataManager.numpy_data
-        if (data.shape[-1] == 1 or data.shape[-1] == 3):
+    def display(self, cmap=colormaps[0], opacity='linear'):
+        data = self.dataManager.ugrid_data
+        if (data == None):
             # 2维灰度图像或RGB图像
             self.display2d(cmap)
         else:
             self.display3d(cmap, opacity)
 
     def display3d(self, cmap=None, opacity=None):
-        data = self.dataManager.numpy_data
+        data = self.dataManager.ugrid_data
         if (self.isVolumeData):
             # 正在显示的是体数据，组件不改变
+            self.plotter.clear()
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
         else:
@@ -242,7 +437,7 @@ class MyWindow(MainWindow):
             self.displayWidget = self.display3DWidget
             self.vlayout.addWidget(self.displayWidget)
             self.displayWidget.setVisible(True)
-
+            self.plotter.clear()
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
             self.isVolumeData = True
@@ -268,5 +463,6 @@ class MyWindow(MainWindow):
 
     def closeEvent(self, event: QtCore.QEvent) -> None:
         super().closeEvent(event)
+
         self.display2DWidget.close()
         self.display3DWidget.close()
