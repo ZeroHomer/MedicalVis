@@ -1,6 +1,7 @@
 import traceback
 import typing
 
+# from Manager import DataManager
 from Manager import DataManager
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QPalette, QColor
@@ -221,20 +222,17 @@ class MyWindow(MainWindow):
     #         self.display3d(data, cmap)
 
     def display(self, cmap='gray', opacity='linear'):
-        data = self.dataManager.ugrid_data
-        if (data == None):
+        data = self.dataManager.numpy_data
+        if (data.shape[-1] == 1 or data.shape[-1] == 3):
             # 2维灰度图像或RGB图像
             self.display2d(cmap)
-
         else:
             self.display3d(cmap, opacity)
 
-
     def display3d(self, cmap=None, opacity=None):
-        data = self.dataManager.ugrid_data
+        data = self.dataManager.numpy_data
         if (self.isVolumeData):
             # 正在显示的是体数据，组件不改变
-            self.plotter.clear()
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
         else:
@@ -244,7 +242,7 @@ class MyWindow(MainWindow):
             self.displayWidget = self.display3DWidget
             self.vlayout.addWidget(self.displayWidget)
             self.displayWidget.setVisible(True)
-            self.plotter.clear()
+
             self.plotter.update()
             self.plotter.add_volume(data, cmap=cmap, opacity=opacity)
             self.isVolumeData = True
